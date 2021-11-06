@@ -144,23 +144,9 @@ namespace AvaloniaNDI
             }
         }
 
-        [Category("NewTek NDI"),
-        Description("If you need partial transparency, set this to true. If not, set to false and save some CPU cycles.")]
-        public bool UnPremultiply
-        {
-            get { return unPremultiply; }
-            set
-            {
-                if (value != unPremultiply)
-                {
-                    unPremultiply = value;
-                    NotifyPropertyChanged("UnPremultiply");
-                }
-            }
-        }
 
         [Category("NewTek NDI"),
-        Description("If you need partial transparency, set this to true. If not, set to false and save some CPU cycles.")]
+        Description("Send System Audio")]
         public bool SendSystemAudio
         {
             get { return sendSystemAudio; }
@@ -431,30 +417,11 @@ namespace AvaloniaNDI
             if (sendInstancePtr == IntPtr.Zero || xres < 8 || yres < 8)
                 return;
 
-            //if (targetBitmap == null || targetBitmap.PixelWidth != xres || targetBitmap.PixelHeight != yres)
-            //{
-            //    // Create a properly sized RenderTargetBitmap
-            //    targetBitmap = new RenderTargetBitmap(xres, yres, 96, 96, PixelFormats.Pbgra32);
-
-            //    fmtConvertedBmp = new FormatConvertedBitmap();
-            //    fmtConvertedBmp.BeginInit();
-            //    fmtConvertedBmp.Source = targetBitmap;
-            //    fmtConvertedBmp.DestinationFormat = PixelFormats.Bgra32;
-            //    fmtConvertedBmp.EndInit();
-            //}
-
-            //// clear to prevent trails
-            //targetBitmap.Clear();
-
-            //// render the content into the bitmap
-            //targetBitmap.Render(this.Child);
-
             stride = (xres * 32/*BGRA bpp*/ + 7) / 8;
             bufferSize = yres * stride;
             aspectRatio = (float)xres / (float)yres;
 
             // allocate some memory for a video buffer
-            //IntPtr bufferPtr = Marshal.AllocHGlobal(bufferSize);
             IntPtr bufferPtr = Marshal.AllocCoTaskMem(bufferSize);
 
             // We are going to create a progressive frame at 60Hz.
@@ -484,62 +451,21 @@ namespace AvaloniaNDI
                 timestamp = 0
             };
 
-            // skia
-            //using var context = new DrawingContext(DrawingContextHelper.WrapSkiaCanvas(page, SkiaPlatform.DefaultDpi));
-            //    targetBitmap = new RenderTargetBitmap(xres, yres, 96, 96, PixelFormats.Pbgra32);
-
-            //    fmtConvertedBmp = new FormatConvertedBitmap();
-            //    fmtConvertedBmp.BeginInit();
-            //    fmtConvertedBmp.Source = targetBitmap;
-            //    fmtConvertedBmp.DestinationFormat = PixelFormats.Bgra32;
-            //    fmtConvertedBmp.EndInit();
             // define the surface properties
             var info = new SKImageInfo(xres, yres);
 
-            // allocate memory
-            //var memory = Marshal.AllocCoTaskMem(info.BytesSize);
-
             // construct a surface around the existing memory
-
             var surface = SKSurface.Create(info, bufferPtr, info.RowBytes);
-            //var surface = SKSurface.Create(xres, yres, SKColorType.Bgra8888, SKAlphaType.Premul, pixels, info.RowBytes);
 
             // get the canvas from the surface
             var canvas = surface.Canvas;
 
-            //ImmediateRenderer x = new ImmediateRenderer(this);
-            //RenderTargetBitmap r = new RenderTargetBitmap(new PixelSize(xres, yres));
-            //r.Render(this);
-
-            //ImmediateRenderer.Render(this, context);
+            // render the Avalonia visual into the buffer
             using var context = new DrawingContext(DrawingContextHelper.WrapSkiaCanvas(canvas, SkiaPlatform.DefaultDpi));
-            //using var context = new DrawingContext(DrawingContextHelper.WrapSkiaCanvas(canvas, new Vector(120.0f, 120.0f)));
             ImmediateRenderer.Render(this.Child, context);
-
-            //if (UnPremultiply && fmtConvertedBmp != null)
-            //{
-            //    fmtConvertedBmp.CopyPixels(new Int32Rect(0, 0, xres, yres), bufferPtr, bufferSize, stride);
-            //}
-            //else
-            //{
-            //    // copy the pixels into the buffer
-            //    targetBitmap.CopyPixels(new Int32Rect(0, 0, xres, yres), bufferPtr, bufferSize, stride);
-            //}
 
             // add it to the output queue
             AddFrame(videoFrame);
-
-            //var file = Path.Combine("R:\\", "1.png");
-            //if (!File.Exists(file))
-            //{
-            //    using (var image = surface.Snapshot())
-            //    using (var data = image.Encode(SKEncodedImageFormat.Png, 80))
-            //    using (var stream = File.OpenWrite(file))
-            //    {
-            //        // save the data to a stream
-            //        data.SaveTo(stream);
-            //    }
-            //}
         }
 
         private static void OnNdiSenderPropertyChanged(AvaloniaPropertyChangedEventArgs e)
@@ -740,9 +666,6 @@ namespace AvaloniaNDI
 
         // used for pausing the send thread
         bool isPausedValue = false;
-
-        // a safe value at the expense of CPU cycles
-        bool unPremultiply = true;
 
         // should we send system audio with the video?
         bool sendSystemAudio = false;
