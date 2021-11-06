@@ -4,9 +4,11 @@ Output NDI® from your Avalonia application!
 
 A crude port of the WPF sample code from the NewTek NDI® 5 SDK.
 
-This library provides a `NDISendContainer` Avalonia component. In the sample, I have wrapped the `NDISendContainer` itself within a ViewBox, which seems to ensure that the rendered output frames remain at the expected size and resolution.
+This library provides a `NDISendContainer` Avalonia component
 
-`NDILibDotNet2` is based on the NDI SDK C# sample code, with the WPF dependencies removed so to target .NET 5
+In the sample, I have wrapped the `NDISendContainer` itself within a ViewBox, which seems to ensure that the rendered output frames remain at the expected size and resolution.
+
+The code of `NDILibDotNet2` is based on the NDI SDK C# sample code, with the WPF dependencies removed so to target .NET 5
 
 ## Project Status: Experimental
 
@@ -18,4 +20,9 @@ From a cursory glance, performance is quite acceptable... it can only improve fr
 
 ![Screenshot of animated progress bar and transparent background](screenshot.png?raw=true "Screenshot of animated progress bar and transparent background")
 
-NDI® (Network Device Interface) is a standard developed by NewTek, Inc that enables applications to deliver video streams via a local area network. Please refer to ndi.tv for further information about the technology.
+[NDI]® (Network Device Interface) is a standard developed by [NewTek], Inc that
+enables applications to deliver video streams via a local area network. Please
+refer to [ndi.tv][NDI] for further information about the technology.
+
+[NDI]: https://www.ndi.tv/
+[NewTek]: https://www.newtek.com/
