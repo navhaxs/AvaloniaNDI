@@ -17,8 +17,6 @@ using Avalonia.Media;
 using Avalonia.Skia.Helpers;
 using Avalonia.Skia;
 using SkiaSharp;
-using Avalonia.Media.Imaging;
-using System.IO;
 
 namespace AvaloniaNDI
 {
@@ -31,7 +29,6 @@ namespace AvaloniaNDI
             get { return _NdiWidth; }
             set { SetAndRaise(NdiWidthProperty, ref _NdiWidth, value); }
         }
-        // TODO
         private int _NdiWidth = 1280;
         public static readonly DirectProperty<NDISendContainer, int> NdiWidthProperty =
             AvaloniaProperty.RegisterDirect<NDISendContainer, int>(nameof(NdiWidth), o => o.NdiWidth, (o, v) => o.NdiWidth = v);
@@ -43,7 +40,6 @@ namespace AvaloniaNDI
             get { return _NdiHeight; }
             set { SetAndRaise(NdiHeightProperty, ref _NdiHeight, value); }
         }
-        // TODO
         private int _NdiHeight = 720;
         public static readonly DirectProperty<NDISendContainer, int> NdiHeightProperty =
             AvaloniaProperty.RegisterDirect<NDISendContainer, int>(nameof(NdiHeight), o => o.NdiHeight, (o, v) => o.NdiHeight = v);
