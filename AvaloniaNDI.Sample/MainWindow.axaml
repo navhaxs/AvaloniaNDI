@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ndi="using:AvaloniaNDI"
+        xmlns:sample="using:AvaloniaNDI.Sample"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AvaloniaNDI.Sample.MainWindow"
+        Background="#623079"
+        Title="AvaloniaNDI.Sample">
+  <Viewbox>
+    <ndi:NDISendContainer NdiName="Hello" NdiWidth="1920" NdiHeight="1080" Width="1920" Height="1080">
+      <Grid Width="1920" Height="1080">
+        <sample:AnimationPage />
+      </Grid>
+    </ndi:NDISendContainer>
+  </Viewbox>
+</Window>

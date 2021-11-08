@@ -18,7 +18,7 @@ But it does work well enough to send out frames correctly, with alpha channel - 
 
 From a cursory glance, performance is quite acceptable... it can only improve from here, right? :) :) :)
 
-![Screenshot of animated progress bar and transparent background](screenshot.png?raw=true "Screenshot of animated progress bar and transparent background")
+![Screenshot of animated progress bar and transparent background](screenshot.gif?raw=true "Screenshot of animated progress bar and transparent background")
 
 [NDI]® (Network Device Interface) is a standard developed by [NewTek], Inc that
 enables applications to deliver video streams via a local area network. Please
