@@ -1,0 +1,10 @@
+This package contains the following two components:
+
+- The NDI® dynamic library
+- The AvaloniaNDI code
+
+The NDI® dynamic library (files contained in the `NDISDK` directory) are
+provided under NewTek's NDI® SDK license. Please review `Processing.NDI.Lib.Licenses.txt`
+before using them in your project.
+
+The AvaloniaNDI code was put into the public domain.
