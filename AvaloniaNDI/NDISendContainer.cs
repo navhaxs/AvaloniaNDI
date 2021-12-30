@@ -1,5 +1,4 @@
-﻿using NAudio.Wave;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,13 +8,14 @@ using System.Text;
 using System.Threading;
 using Avalonia.Controls;
 using Avalonia;
-using NewTek;
-using Avalonia.Rendering;
-using Avalonia.Threading;
-using NewTek.NDI;
 using Avalonia.Media;
+using Avalonia.Rendering;
 using Avalonia.Skia.Helpers;
 using Avalonia.Skia;
+using Avalonia.Threading;
+using NAudio.Wave;
+using NewTek;
+using NewTek.NDI;
 using SkiaSharp;
 
 namespace AvaloniaNDI

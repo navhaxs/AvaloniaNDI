@@ -6,30 +6,24 @@ namespace AvaloniaNDI
 {
     class NDIRenderLoopTask : IRenderLoopTask
     {
-        private Action renderFunc;
-        private Action updateFunc;
+        private Action onUpdateFunc;
 
-        public NDIRenderLoopTask(Action renderFunc = null, Action updateFunc = null)
+        public NDIRenderLoopTask(Action onUpdateFunc = null)
         {
-            this.renderFunc = renderFunc;
-            this.updateFunc = updateFunc;
+            this.onUpdateFunc = onUpdateFunc;
         }
 
         public bool NeedsUpdate => true;
 
         public void Render()
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                renderFunc?.Invoke();
-            });
         }
 
         public void Update(TimeSpan time)
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                updateFunc?.Invoke();
+                onUpdateFunc?.Invoke();
             });
         }
     }
