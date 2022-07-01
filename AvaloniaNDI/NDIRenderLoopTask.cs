@@ -17,6 +17,7 @@ namespace AvaloniaNDI
 
         public void Render()
         {
+
         }
 
         public void Update(TimeSpan time)

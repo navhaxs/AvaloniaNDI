@@ -17,6 +17,7 @@ using NAudio.Wave;
 using NewTek;
 using NewTek.NDI;
 using SkiaSharp;
+using System.Threading.Tasks;
 
 namespace AvaloniaNDI
 {
@@ -288,6 +289,8 @@ namespace AvaloniaNDI
             }
         }
 
+        private NDIRenderLoopTask _NDIRenderLoopTask;
+
         public NDISendContainer()
         {
             if (Design.IsDesignMode)
@@ -297,22 +300,60 @@ namespace AvaloniaNDI
             sendThread = new Thread(SendThreadProc) { IsBackground = true, Name = "WpfNdiSendThread" };
             sendThread.Start();
 
-            IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
-            renderLoop.Add(new NDIRenderLoopTask(OnCompositionTargetRendering));
 
-            // Not required, but "correct". (see the SDK documentation)
-            if (!NDIlib.initialize())
+            _loop = Task.Factory.StartNew(() =>
+            {
+                Arguments args;
+                while (true && _disposed == false)
+                {
+                    if (_argQueue.TryDequeue(out args))
+                    {
+
+                        Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            OnCompositionTargetRendering();
+                        });
+                    }
+
+                    // (1/60fps)*1000 = 16.67 ms
+                    Thread.Sleep(TimeSpan.FromMilliseconds(16.67d));
+                }
+            });
+            _NDIRenderLoopTask = new NDIRenderLoopTask(ThrottledFunction);
+            IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
+            renderLoop.Add(_NDIRenderLoopTask);
+
+            try
+            {
+                // Not required, but "correct". (see the SDK documentation)
+                if (!NDIlib.initialize())
+                {
+                    // Cannot run NDI. Most likely because the CPU is not sufficient (see SDK documentation).
+                    // you can check this directly with a call to NDIlib.is_supported_CPU()
+                    //MessageBox.Show("Cannot run NDI");
+                }
+
+                NdiNameProperty.Changed.Subscribe(OnNdiSenderPropertyChanged);
+                NdiGroupsProperty.Changed.Subscribe(OnNdiSenderPropertyChanged);
+                NdiClockToVideoProperty.Changed.Subscribe(OnNdiSenderPropertyChanged);
+
+                InitializeNdi();
+            }
+            catch (Exception)
             {
                 // Cannot run NDI. Most likely because the CPU is not sufficient (see SDK documentation).
                 // you can check this directly with a call to NDIlib.is_supported_CPU()
                 //MessageBox.Show("Cannot run NDI");
+                //throw;
             }
 
-            NdiNameProperty.Changed.Subscribe(OnNdiSenderPropertyChanged);
-            NdiGroupsProperty.Changed.Subscribe(OnNdiSenderPropertyChanged);
-            NdiClockToVideoProperty.Changed.Subscribe(OnNdiSenderPropertyChanged);
+            this.DetachedFromVisualTree += NDISendContainer_DetachedFromVisualTree;
 
-            InitializeNdi();
+        }
+
+        private void NDISendContainer_DetachedFromVisualTree(object sender, VisualTreeAttachmentEventArgs e)
+        {
+            Dispose();
         }
 
         public void Dispose()
@@ -389,12 +430,33 @@ namespace AvaloniaNDI
                 // Not required, but "correct". (see the SDK documentation)
                 NDIlib.destroy();
 
+                // Remove Avalonia render loop task
+                IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
+                renderLoop.Remove(_NDIRenderLoopTask);
+
+                _NDIRenderLoopTask = null;
+
+                _loop = null;
+
                 _disposed = true;
             }
         }
 
         private bool _disposed = false;
+        private class Arguments
+        {
+            public int coolInt;
+            public double whatever;
+            public string stringyThing;
+        }
 
+        private ConcurrentQueue<Arguments> _argQueue = new ConcurrentQueue<Arguments>();
+        private Task _loop;
+
+        public void ThrottledFunction()
+        {
+            _argQueue.Enqueue(new Arguments() { });
+        }
         private void OnCompositionTargetRendering()
         {
             if (IsSendPaused)
@@ -458,6 +520,10 @@ namespace AvaloniaNDI
 
             // render the Avalonia visual into the buffer
             using var context = new DrawingContext(DrawingContextHelper.WrapSkiaCanvas(canvas, SkiaPlatform.DefaultDpi));
+
+            if (this.Child == null)
+                return;
+
             ImmediateRenderer.Render(this.Child, context);
 
             // add it to the output queue
