@@ -1,10 +1,26 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>AvaloniaNDI</AssemblyName>
     <RootNamespace>AvaloniaNDI</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="NDISDK\Processing.NDI.Lib.x64.dll" />
+    <None Remove="NDISDK\Processing.NDI.Lib.x86.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+	  <ContentWithTargetPath Include="NDISDK\Processing.NDI.Lib.x64.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		  <TargetPath>Processing.NDI.Lib.x64.dll</TargetPath>
+    </ContentWithTargetPath>
+		  <ContentWithTargetPath Include="NDISDK\Processing.NDI.Lib.x86.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			  <TargetPath>Processing.NDI.Lib.x86.dll</TargetPath>
+    </ContentWithTargetPath>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="0.10.10" />
@@ -22,16 +38,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="NDISDK\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="NDISDK\Processing.NDI.Lib.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="NDISDK\Processing.NDI.Lib.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+	  <ContentWithTargetPath Include="NDISDK\Processing.NDI.Lib.x64.dll">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <TargetPath>Processing.NDI.Lib.x64.dll</TargetPath>
+	  </ContentWithTargetPath>
+	  <ContentWithTargetPath Include="NDISDK\Processing.NDI.Lib.x86.dll">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <TargetPath>Processing.NDI.Lib.x86.dll</TargetPath>
+	  </ContentWithTargetPath>
   </ItemGroup>
 
 </Project>
