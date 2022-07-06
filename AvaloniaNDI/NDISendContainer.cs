@@ -344,7 +344,7 @@ namespace AvaloniaNDI
                 // Cannot run NDI. Most likely because the CPU is not sufficient (see SDK documentation).
                 // you can check this directly with a call to NDIlib.is_supported_CPU()
                 //MessageBox.Show("Cannot run NDI");
-                //throw;
+                throw;
             }
 
             this.DetachedFromVisualTree += NDISendContainer_DetachedFromVisualTree;
@@ -419,6 +419,11 @@ namespace AvaloniaNDI
                     pendingFrames.Dispose();
                 }
 
+                // Remove Avalonia render loop task
+                IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
+                renderLoop.Remove(_NDIRenderLoopTask);
+                _NDIRenderLoopTask = null;
+
                 // Destroy the NDI sender
                 if (sendInstancePtr != IntPtr.Zero)
                 {
@@ -427,14 +432,12 @@ namespace AvaloniaNDI
                     sendInstancePtr = IntPtr.Zero;
                 }
 
-                // Not required, but "correct". (see the SDK documentation)
-                NDIlib.destroy();
-
-                // Remove Avalonia render loop task
-                IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
-                renderLoop.Remove(_NDIRenderLoopTask);
-
-                _NDIRenderLoopTask = null;
+                try
+                {
+                    // Not required, but "correct". (see the SDK documentation)
+                    NDIlib.destroy();
+                }
+                catch (DllNotFoundException) { }
 
                 _loop = null;
 
