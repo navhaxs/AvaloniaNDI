@@ -300,7 +300,6 @@ namespace AvaloniaNDI
             sendThread = new Thread(SendThreadProc) { IsBackground = true, Name = "WpfNdiSendThread" };
             sendThread.Start();
 
-
             _loop = Task.Factory.StartNew(() =>
             {
                 Arguments args;
@@ -358,6 +357,9 @@ namespace AvaloniaNDI
 
         public void Dispose()
         {
+            if (Design.IsDesignMode)
+                return;
+
             Dispose(true);
             GC.SuppressFinalize(this);
         }
