@@ -470,6 +470,10 @@ namespace AvaloniaNDI
             if (Design.IsDesignMode)
                 return;
 
+            // skip if UI thread has pending render jobs (fixes blinking/flashing empty frames)
+            if (Dispatcher.UIThread.HasJobsWithPriority(DispatcherPriority.Render))
+                return;
+
             int xres = NdiWidth;
             int yres = NdiHeight;
 
