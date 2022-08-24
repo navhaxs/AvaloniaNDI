@@ -467,8 +467,10 @@ namespace AvaloniaNDI
             if (IsSendPaused)
                 return;
 
+#if DEBUG
             if (Design.IsDesignMode)
                 return;
+#endif
 
             // skip if UI thread has pending render jobs (fixes blinking/flashing empty frames)
             if (Dispatcher.UIThread.HasJobsWithPriority(DispatcherPriority.Render))
