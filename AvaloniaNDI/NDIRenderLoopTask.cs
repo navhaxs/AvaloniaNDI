@@ -6,9 +6,9 @@ namespace AvaloniaNDI
 {
     class NDIRenderLoopTask : IRenderLoopTask
     {
-        private Action onUpdateFunc;
+        private Action<TimeSpan> onUpdateFunc;
 
-        public NDIRenderLoopTask(Action onUpdateFunc = null)
+        public NDIRenderLoopTask(Action<TimeSpan> onUpdateFunc = null)
         {
             this.onUpdateFunc = onUpdateFunc;
         }
@@ -24,7 +24,7 @@ namespace AvaloniaNDI
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                onUpdateFunc?.Invoke();
+                onUpdateFunc?.Invoke(time);
             });
         }
     }

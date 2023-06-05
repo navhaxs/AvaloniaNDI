@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
+﻿using Avalonia;
 using Avalonia.Controls;
-using Avalonia;
-using Avalonia.Media;
-using Avalonia.Rendering;
+using Avalonia.Media.Imaging;
 using Avalonia.Skia.Helpers;
 using Avalonia.Skia;
 using Avalonia.Threading;
@@ -17,7 +8,19 @@ using NAudio.Wave;
 using NewTek;
 using NewTek.NDI;
 using SkiaSharp;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Platform;
+using Avalonia.Rendering;
+using Avalonia.Controls.Platform.Surfaces;
+using System.Diagnostics;
 
 namespace AvaloniaNDI
 {
@@ -80,6 +83,16 @@ namespace AvaloniaNDI
         public static readonly DirectProperty<NDISendContainer, string> NdiNameProperty =
             AvaloniaProperty.RegisterDirect<NDISendContainer, string>(nameof(NdiName), o => o.NdiName, (o, v) => { o.NdiName = v; });
 
+        [Category("NewTek NDI"),
+Description("Function to determine whether the content requires high resolution NDI frame updates (i.e. is an animation or video playback). Optional.")]
+        public Func<NDISendContainer, bool> IsContentHighResCheckFunc
+        {
+            get { return _IsContentHighResCheckFunc; }
+            set { SetAndRaise(IsContentHighResCheckFuncProperty, ref _IsContentHighResCheckFunc, value); }
+        }
+        private Func<NDISendContainer, bool> _IsContentHighResCheckFunc = null;
+        public static readonly DirectProperty<NDISendContainer, Func<NDISendContainer, bool>> IsContentHighResCheckFuncProperty =
+            AvaloniaProperty.RegisterDirect<NDISendContainer, Func<NDISendContainer, bool>>(nameof(IsContentHighResCheckFunc), o => o.IsContentHighResCheckFunc, (o, v) => { o.IsContentHighResCheckFunc = v; });
 
         [Category("NewTek NDI"),
         Description("NDI groups this sender will belong to. Optional.")]
@@ -135,11 +148,12 @@ namespace AvaloniaNDI
             {
                 if (value != isPausedValue)
                 {
-                    isPausedValue = value;
-                    NotifyPropertyChanged("IsSendPaused");
+                    SetAndRaise(IsOnPreviewProperty, ref isPausedValue, value);
                 }
             }
         }
+        public static readonly DirectProperty<NDISendContainer, bool> IsSendPausedProperty =
+            AvaloniaProperty.RegisterDirect<NDISendContainer, bool>(nameof(IsSendPaused), o => o.IsSendPaused, (o, v) => { o.IsSendPaused = v; });
 
 
         [Category("NewTek NDI"),
@@ -258,7 +272,7 @@ namespace AvaloniaNDI
             }
             else
             {
-                System.Diagnostics.Debug.Assert(false, "Unexpected audio sample size.");
+                Debug.Assert(false, "Unexpected audio sample size.");
             }
 
             // release the GC pinning of the byte[]'s
@@ -307,7 +321,6 @@ namespace AvaloniaNDI
                 {
                     if (_argQueue.TryDequeue(out args))
                     {
-
                         Dispatcher.UIThread.InvokeAsync(() =>
                         {
                             OnCompositionTargetRendering();
@@ -321,6 +334,8 @@ namespace AvaloniaNDI
             _NDIRenderLoopTask = new NDIRenderLoopTask(ThrottledFunction);
             IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
             renderLoop.Add(_NDIRenderLoopTask);
+
+            this.LayoutUpdated += NDISendContainer_LayoutUpdated;
 
             try
             {
@@ -350,6 +365,9 @@ namespace AvaloniaNDI
 
         }
 
+        private void NDISendContainer_LayoutUpdated(object sender, EventArgs e)
+        {
+        }
         private void NDISendContainer_DetachedFromVisualTree(object sender, VisualTreeAttachmentEventArgs e)
         {
             Dispose();
@@ -458,11 +476,15 @@ namespace AvaloniaNDI
         private ConcurrentQueue<Arguments> _argQueue = new ConcurrentQueue<Arguments>();
         private Task _loop;
 
-        public void ThrottledFunction()
+
+        public void ThrottledFunction(TimeSpan t)
         {
             _argQueue.Enqueue(new Arguments() { });
         }
-        private void OnCompositionTargetRendering()
+
+        RenderTargetBitmap rtb;
+
+        private unsafe void OnCompositionTargetRendering()
         {
             if (IsSendPaused)
                 return;
@@ -476,6 +498,13 @@ namespace AvaloniaNDI
             if (Dispatcher.UIThread.HasJobsWithPriority(DispatcherPriority.Render))
                 return;
 
+            // TODO: cache this value so its not called on *every* call
+            if (NDIlib.send_get_no_connections(sendInstancePtr, 0) == 0)
+                return;
+
+            if (this.Child == null)
+                return;
+
             int xres = NdiWidth;
             int yres = NdiHeight;
 
@@ -485,6 +514,13 @@ namespace AvaloniaNDI
             // sanity
             if (sendInstancePtr == IntPtr.Zero || xres < 8 || yres < 8)
                 return;
+
+            if (rtb == null || rtb.PixelSize.Width != xres || rtb.PixelSize.Height != yres)
+            {
+                // Create a properly sized RenderTargetBitmap
+                var scale = 1; // VisualRoot!.RenderScaling;
+                rtb = new RenderTargetBitmap(new PixelSize(xres, yres), new Vector(96 * scale, 96 * scale));
+            }
 
             stride = (xres * 32/*BGRA bpp*/ + 7) / 8;
             bufferSize = yres * stride;
@@ -524,22 +560,62 @@ namespace AvaloniaNDI
             var info = new SKImageInfo(xres, yres);
 
             // construct a surface around the existing memory
-            var surface = SKSurface.Create(info, bufferPtr, info.RowBytes);
+            var destinationSurface = SKSurface.Create(info, bufferPtr, info.RowBytes);
 
             // get the canvas from the surface
-            var canvas = surface.Canvas;
+            var destinationCanvas = destinationSurface.Canvas;
+            using IDrawingContextImpl iHaveTheDestination = DrawingContextHelper.WrapSkiaCanvas(destinationCanvas, SkiaPlatform.DefaultDpi);
 
-            // render the Avalonia visual into the buffer
-            using var context = new DrawingContext(DrawingContextHelper.WrapSkiaCanvas(canvas, SkiaPlatform.DefaultDpi));
+            // render the Avalonia visual
+            rtb.Render(this.Child);
+            //rtb.Save(@"R:\ndi_out.png");
 
-            if (this.Child == null)
-                return;
-
-            ImmediateRenderer.Render(this.Child, context);
+            IRenderTargetBitmapImpl item = rtb.PlatformImpl.Item;
+            IDrawingContextImpl drawingContextImpl = item.CreateDrawingContext();
+            var leaseFeature = drawingContextImpl.GetFeature<ISkiaSharpApiLeaseFeature>();
+            using var lease = leaseFeature.Lease();
+            using SKImage skImage = lease.SkSurface.Snapshot();
+            destinationCanvas.DrawImage(skImage, new SKPoint(0, 0));
 
             // add it to the output queue
             AddFrame(videoFrame);
         }
+
+
+        class Framebuffer : ILockedFramebuffer, IFramebufferPlatformSurface
+        {
+            public Framebuffer(PixelFormat fmt, PixelSize size)
+            {
+                Format = fmt;
+                var bpp = fmt == PixelFormat.Rgb565 ? 2 : 4;
+                Size = size;
+                RowBytes = bpp * size.Width;
+                Address = Marshal.AllocHGlobal(size.Height * RowBytes);
+            }
+
+            public IntPtr Address { get; }
+
+            public Vector Dpi { get; } = new Vector(96, 96);
+
+            public PixelFormat Format { get; }
+
+            public PixelSize Size { get; }
+
+            public int RowBytes { get; }
+
+            public void Dispose()
+            {
+                //no-op
+            }
+
+            public ILockedFramebuffer Lock()
+            {
+                return this;
+            }
+
+            public void Deallocate() => Marshal.FreeHGlobal(Address);
+        }
+
 
         private static void OnNdiSenderPropertyChanged(AvaloniaPropertyChangedEventArgs e)
         {
@@ -721,8 +797,7 @@ namespace AvaloniaNDI
         private Object sendInstanceLock = new Object();
         private IntPtr sendInstancePtr = IntPtr.Zero;
 
-        //RenderTargetBitmap targetBitmap = null;
-        //FormatConvertedBitmap fmtConvertedBmp = null;
+        //RenderTargetBitmap iHaveTheTargetBitmap = null;
 
         private int stride;
         private int bufferSize;

@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <AssemblyName>AvaloniaNDI</AssemblyName>
     <RootNamespace>AvaloniaNDI</RootNamespace>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,8 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.10.18" />
-    <PackageReference Include="Avalonia.Skia" Version="0.10.18" />
+    <PackageReference Include="Avalonia" Version="11.0.0-preview8" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.0-preview8" />
+    <PackageReference Include="Avalonia.Skia" Version="11.0.0-preview8" />
   </ItemGroup>
 
   <ItemGroup>
