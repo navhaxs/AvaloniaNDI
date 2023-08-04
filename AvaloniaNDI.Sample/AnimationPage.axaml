@@ -314,9 +314,6 @@
     <Grid>
       <Svg Name="svgSvg" Path="/Assets/avalonia_pure.svg"/>
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
-        <StackPanel.Clock>
-          <Clock />
-        </StackPanel.Clock>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20">
           <TextBlock VerticalAlignment="Center">Hover to activate Keyframe Animations.</TextBlock>
           <Button Content="{Binding PlayStateText}" Command="{Binding TogglePlayState}" Click="ToggleClock" />

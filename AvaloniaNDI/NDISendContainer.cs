@@ -18,8 +18,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Platform;
-using Avalonia.Rendering;
-using Avalonia.Controls.Platform.Surfaces;
 using System.Diagnostics;
 
 namespace AvaloniaNDI
@@ -303,8 +301,6 @@ Description("Function to determine whether the content requires high resolution 
             }
         }
 
-        private NDIRenderLoopTask _NDIRenderLoopTask;
-
         public NDISendContainer()
         {
             if (Design.IsDesignMode)
@@ -327,13 +323,11 @@ Description("Function to determine whether the content requires high resolution 
                         });
                     }
 
+                    // TODO: 2x here is a hack for testing
                     // (1/60fps)*1000 = 16.67 ms
-                    Thread.Sleep(TimeSpan.FromMilliseconds(16.67d));
+                    Thread.Sleep(TimeSpan.FromMilliseconds(2 * 16.67d));
                 }
             });
-            _NDIRenderLoopTask = new NDIRenderLoopTask(ThrottledFunction);
-            IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
-            renderLoop.Add(_NDIRenderLoopTask);
 
             this.LayoutUpdated += NDISendContainer_LayoutUpdated;
 
@@ -361,8 +355,26 @@ Description("Function to determine whether the content requires high resolution 
                 throw;
             }
 
+            this.AttachedToVisualTree += NDISendContainer_AttachedToVisualTree;
             this.DetachedFromVisualTree += NDISendContainer_DetachedFromVisualTree;
 
+        }
+
+        private void NDISendContainer_AttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs e)
+        {
+            GetNextRenderTick();
+        }
+
+        void GetNextRenderTick()
+        {
+            if (!_disposed)
+            {
+                Window.GetTopLevel(this).RequestAnimationFrame((TimeSpan s) =>
+                {
+                    _argQueue.Enqueue(new Arguments() { });
+                    GetNextRenderTick();
+            });
+            }
         }
 
         private void NDISendContainer_LayoutUpdated(object sender, EventArgs e)
@@ -438,11 +450,6 @@ Description("Function to determine whether the content requires high resolution 
 
                     pendingFrames.Dispose();
                 }
-
-                // Remove Avalonia render loop task
-                IRenderLoop renderLoop = AvaloniaLocator.Current.GetService<IRenderLoop>();
-                renderLoop.Remove(_NDIRenderLoopTask);
-                _NDIRenderLoopTask = null;
 
                 // Destroy the NDI sender
                 if (sendInstancePtr != IntPtr.Zero)
@@ -568,54 +575,12 @@ Description("Function to determine whether the content requires high resolution 
 
             // render the Avalonia visual
             rtb.Render(this.Child);
-            //rtb.Save(@"R:\ndi_out.png");
 
-            IRenderTargetBitmapImpl item = rtb.PlatformImpl.Item;
-            IDrawingContextImpl drawingContextImpl = item.CreateDrawingContext();
-            var leaseFeature = drawingContextImpl.GetFeature<ISkiaSharpApiLeaseFeature>();
-            using var lease = leaseFeature.Lease();
-            using SKImage skImage = lease.SkSurface.Snapshot();
-            destinationCanvas.DrawImage(skImage, new SKPoint(0, 0));
+            rtb.CopyPixels(new PixelRect(0, 0, xres, yres), bufferPtr, bufferSize, stride);
 
             // add it to the output queue
             AddFrame(videoFrame);
         }
-
-
-        class Framebuffer : ILockedFramebuffer, IFramebufferPlatformSurface
-        {
-            public Framebuffer(PixelFormat fmt, PixelSize size)
-            {
-                Format = fmt;
-                var bpp = fmt == PixelFormat.Rgb565 ? 2 : 4;
-                Size = size;
-                RowBytes = bpp * size.Width;
-                Address = Marshal.AllocHGlobal(size.Height * RowBytes);
-            }
-
-            public IntPtr Address { get; }
-
-            public Vector Dpi { get; } = new Vector(96, 96);
-
-            public PixelFormat Format { get; }
-
-            public PixelSize Size { get; }
-
-            public int RowBytes { get; }
-
-            public void Dispose()
-            {
-                //no-op
-            }
-
-            public ILockedFramebuffer Lock()
-            {
-                return this;
-            }
-
-            public void Deallocate() => Marshal.FreeHGlobal(Address);
-        }
-
 
         private static void OnNdiSenderPropertyChanged(AvaloniaPropertyChangedEventArgs e)
         {
