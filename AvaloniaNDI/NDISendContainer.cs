@@ -563,16 +563,6 @@ Description("Function to determine whether the content requires high resolution 
                 timestamp = 0
             };
 
-            // define the surface properties
-            var info = new SKImageInfo(xres, yres);
-
-            // construct a surface around the existing memory
-            var destinationSurface = SKSurface.Create(info, bufferPtr, info.RowBytes);
-
-            // get the canvas from the surface
-            var destinationCanvas = destinationSurface.Canvas;
-            using IDrawingContextImpl iHaveTheDestination = DrawingContextHelper.WrapSkiaCanvas(destinationCanvas, SkiaPlatform.DefaultDpi);
-
             // render the Avalonia visual
             rtb.Render(this.Child);
 
